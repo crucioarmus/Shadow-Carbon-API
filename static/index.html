@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carbon Estimator</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f5f5f3;
+      color: #1a1a1a;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    .container {
+      max-width: 520px;
+      width: 100%;
+    }
+
+    .header { margin-bottom: 2rem; }
+    .header h1 { font-size: 22px; font-weight: 500; margin-bottom: 4px; }
+    .header p { font-size: 14px; color: #888; }
+
+    .card {
+      background: #fff;
+      border: 0.5px solid #ddd;
+      border-radius: 12px;
+      padding: 1.25rem;
+      margin-bottom: 12px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 6px;
+    }
+
+    input[type="number"] {
+      width: 100%;
+      padding: 9px 12px;
+      border: 0.5px solid #ccc;
+      border-radius: 8px;
+      font-size: 15px;
+      outline: none;
+      background: #fff;
+      color: #1a1a1a;
+      margin-bottom: 1.25rem;
+    }
+
+    input[type="number"]:focus { border-color: #888; }
+
+    .cat-group { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1.25rem; }
+
+    .cat-btn {
+      padding: 6px 16px;
+      border: 0.5px solid #ccc;
+      border-radius: 8px;
+      background: transparent;
+      font-size: 13px;
+      cursor: pointer;
+      color: #666;
+      transition: all 0.15s;
+    }
+
+    .cat-btn.active {
+      background: #f0f0ee;
+      color: #1a1a1a;
+      font-weight: 500;
+      border-color: #999;
+    }
+
+    .submit-btn {
+      width: 100%;
+      padding: 10px;
+      background: #f0f0ee;
+      border: 0.5px solid #ccc;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      color: #1a1a1a;
+      transition: background 0.15s;
+    }
+
+    .submit-btn:hover { background: #e5e5e2; }
+
+    .result-card { display: none; }
+
+    .result-label {
+      font-size: 13px;
+      color: #888;
+      margin-bottom: 12px;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .metric {
+      background: #f5f5f3;
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .metric-label { font-size: 12px; color: #888; margin-bottom: 4px; }
+    .metric-value { font-size: 22px; font-weight: 500; }
+    .metric-unit { font-size: 11px; color: #aaa; margin-top: 4px; }
+
+    .details {
+      border-top: 0.5px solid #eee;
+      padding-top: 12px;
+    }
+
+    .details table { width: 100%; font-size: 13px; border-collapse: collapse; }
+    .details td { padding: 4px 0; }
+    .details td:first-child { color: #888; }
+    .details td:last-child { text-align: right; font-weight: 500; }
+
+    .error-box {
+      display: none;
+      margin-top: 12px;
+      padding: 10px;
+      background: #fef0f0;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #c0392b;
+    }
+
+    .footer {
+      font-size: 11px;
+      color: #bbb;
+      text-align: center;
+      margin-top: 12px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="header">
+    <h1>Carbon footprint estimator</h1>
+    <p>CSRD-aligned scope reporting · MVP v1</p>
+  </div>
+
+  <div class="card">
+    <label>Amount (PKR / units)</label>
+    <input type="number" id="amount" min="0.01" step="any" placeholder="e.g. 5000" />
+
+    <label>Category</label>
+    <div class="cat-group" id="cat-group">
+      <button class="cat-btn active" data-cat="fuel" onclick="selectCat(this)">Fuel</button>
+      <button class="cat-btn" data-cat="groceries" onclick="selectCat(this)">Groceries</button>
+      <button class="cat-btn" data-cat="transport" onclick="selectCat(this)">Transport</button>
+    </div>
+
+    <button class="submit-btn" onclick="submitEstimate()">Estimate carbon output →</button>
+  </div>
+
+  <div class="card result-card" id="result-card">
+    <p class="result-label">Estimation result</p>
+
+    <div class="metrics">
+      <div class="metric">
+        <div class="metric-label">CO₂ emitted</div>
+        <div class="metric-value" id="res-carbon">—</div>
+        <div class="metric-unit">kg CO₂e</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Scope</div>
+        <div class="metric-value" id="res-scope">—</div>
+        <div class="metric-unit">CSRD framework</div>
+      </div>
+    </div>
+
+    <div class="details">
+      <table>
+        <tr>
+          <td>Category</td>
+          <td id="res-cat"></td>
+        </tr>
+        <tr>
+          <td>Amount entered</td>
+          <td id="res-amount"></td>
+        </tr>
+        <tr>
+          <td>Emission factor</td>
+          <td id="res-factor"></td>
+        </tr>
+        <tr>
+          <td>Framework</td>
+          <td>CSRD</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="error-box" id="error-box">
+      <span id="error-text"></span>
+    </div>
+  </div>
+
+  <p class="footer">Mirrors your FastAPI /estimate-carbon endpoint</p>
+
+</div>
+
+<script>
+  const factors = { fuel: 0.009, groceries: 0.002, transport: 0.007 };
+  const scopeMap = { fuel: "Scope 1", groceries: "Scope 3", transport: "Scope 3" };
+  let selectedCat = "fuel";
+
+  function selectCat(el) {
+    document.querySelectorAll(".cat-btn").forEach(b => b.classList.remove("active"));
+    el.classList.add("active");
+    selectedCat = el.dataset.cat;
+  }
+
+  function submitEstimate() {
+    const amt = parseFloat(document.getElementById("amount").value);
+    const card = document.getElementById("result-card");
+    const errBox = document.getElementById("error-box");
+
+    card.style.display = "block";
+    errBox.style.display = "none";
+
+    if (!amt || amt <= 0) {
+      errBox.style.display = "block";
+      document.getElementById("error-text").textContent = "Please enter a valid amount greater than 0.";
+      return;
+    }
+
+    const carbon = (amt * factors[selectedCat]).toFixed(3);
+    document.getElementById("res-carbon").textContent = carbon;
+    document.getElementById("res-scope").textContent = scopeMap[selectedCat];
+    document.getElementById("res-cat").textContent = selectedCat.charAt(0).toUpperCase() + selectedCat.slice(1);
+    document.getElementById("res-amount").textContent = amt.toLocaleString();
+    document.getElementById("res-factor").textContent = factors[selectedCat] + " kg CO₂e per unit";
+  }
+</script>
+
+</body>
+</html>
